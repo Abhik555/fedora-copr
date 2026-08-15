@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -61,7 +61,7 @@ jobs:
 
           CURRENT_VERSION=$(sed -nE \
             's/^Version:[[:space:]]*([^[:space:]]+).*$/\1/p' \
-            ab-download-manager.spec \
+            ab-download-manager/ab-download-manager.spec \
             | head -n1)
 
           if [[ -z "$CURRENT_VERSION" ]]; then
@@ -123,10 +123,10 @@ jobs:
 
           sed -i -E \
             "s/^Version:[[:space:]]*.*/Version:        ${VERSION}/" \
-            ab-download-manager.spec
+            ab-download-manager/ab-download-manager.spec
 
           echo "Updated spec:"
-          grep '^Version:' ab-download-manager.spec
+          grep '^Version:' ab-download-manager/ab-download-manager.spec
 
       - name: Validate spec
         if: steps.check.outputs.needed == 'true'
@@ -136,14 +136,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rpm
 
-          rpmspec -P ab-download-manager.spec > /dev/null
+          rpmspec -P ab-download-manager/ab-download-manager.spec > /dev/null
 
           echo "RPM spec syntax is valid."
 
       - name: Show changes
         if: steps.check.outputs.needed == 'true'
         run: |
-          git diff -- ab-download-manager.spec
+          git diff -- ab-download-manager/ab-download-manager.spec
 
       - name: Commit and push
         if: steps.check.outputs.needed == 'true'
@@ -158,7 +158,7 @@ jobs:
           git config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add ab-download-manager.spec
+          git add ab-download-manager/ab-download-manager.spec
 
           if git diff --cached --quiet; then
             echo "No changes to commit."

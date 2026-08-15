@@ -47,7 +47,7 @@ jobs:
             exit 1
           fi
 
-          current="$(sed -n 's/^Version:[[:space:]]*//p' prismlauncher.spec | head -n1)"
+          current="$(sed -n 's/^Version:[[:space:]]*//p' prism-launcher/prismlauncher.spec | head -n1)"
 
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "current=$current" >> "$GITHUB_OUTPUT"
@@ -65,9 +65,9 @@ jobs:
 
           sed -i -E \
             "s/^Version:[[:space:]]+.*/Version:          ${latest}/" \
-            prismlauncher.spec
+            prism-launcher/prismlauncher.spec
 
-          grep -q "^Version:[[:space:]]*${latest}$" prismlauncher.spec
+          grep -q "^Version:[[:space:]]*${latest}$" prism-launcher/prismlauncher.spec
 
       - name: Verify source archive exists
         if: steps.release.outputs.latest != steps.release.outputs.current
@@ -92,7 +92,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add prismlauncher.spec
+          git add prism-launcher/prismlauncher.spec
           git commit -m "Update Prism Launcher to ${version}"
           git push
 
