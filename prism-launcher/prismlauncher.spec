@@ -51,16 +51,7 @@ BuildRequires:    clang
 BuildRequires:    lld
 %endif
 
-# JDKs less than the most recent release & LTS are no longer in the default
-# Fedora repositories
-# Make sure you have Adoptium's repositories enabled
-# https://fedoraproject.org/wiki/Changes/ThirdPartyLegacyJdks
-# https://adoptium.net/installation/linux/#_centosrhelfedora_instructions
-%if 0%{?fedora} > 41
-BuildRequires:    temurin-17-jdk
-%else
 BuildRequires:    java-17-openjdk-devel
-%endif
 
 BuildRequires:    cmake >= 3.22
 BuildRequires:    ninja-build
