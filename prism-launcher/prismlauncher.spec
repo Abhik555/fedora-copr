@@ -51,7 +51,7 @@ BuildRequires:    clang
 BuildRequires:    lld
 %endif
 
-BuildRequires:    java-17-openjdk-devel
+BuildRequires:    java-devel >= 17
 
 BuildRequires:    cmake >= 3.22
 BuildRequires:    ninja-build
@@ -91,10 +91,12 @@ Requires:         qt%{qt_version}-qtsvg
 Requires:         javapackages-filesystem
 Recommends:       java-25-openjdk
 Recommends:       java-21-openjdk
-# See note above
 %if 0%{?fedora} && 0%{?fedora} < 42
 Recommends:       java-17-openjdk
 Suggests:         java-1.8.0-openjdk
+%else
+Suggests:         adoptium-temurin-java-repository
+Suggests:         temurin-17-jdk
 %endif
 
 # Used to gather GPU with `lspci`
@@ -108,7 +110,12 @@ Suggests:         gamemode
 
 %description
 A custom launcher for Minecraft that allows you to easily manage
-multiple installations of Minecraft at once (Fork of MultiMC)
+multiple installations of Minecraft at once (Fork of MultiMC).
+
+On Fedora 42+, if Java 17 is required for specific Minecraft versions,
+it can be installed via the Adoptium repository:
+  sudo dnf install adoptium-temurin-java-repository
+  sudo dnf install temurin-17-jdk
 
 
 %prep
