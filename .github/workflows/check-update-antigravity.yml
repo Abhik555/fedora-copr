@@ -21,7 +21,7 @@ jobs:
       - name: Get current spec version
         id: current
         run: |
-          VERSION=$(grep -m1 '^Version:' antigravity-ide/antigravity-ide.spec | awk '{print $2}')
+          VERSION=$(grep -m1 '^Version:' antigravity-ide-project/antigravity-ide.spec | awk '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current spec version: $VERSION"
 
@@ -62,21 +62,21 @@ jobs:
           URL_ARM64: ${{ steps.latest.outputs.url_arm64 }}
         run: |
           # Update URLs in comments
-          sed -i "s|^# URL_X64:.*|# URL_X64:        $URL_X64|" antigravity-ide/antigravity-ide.spec
-          sed -i "s|^# URL_ARM64:.*|# URL_ARM64:      $URL_ARM64|" antigravity-ide/antigravity-ide.spec
+          sed -i "s|^# URL_X64:.*|# URL_X64:        $URL_X64|" antigravity-ide-project/antigravity-ide.spec
+          sed -i "s|^# URL_ARM64:.*|# URL_ARM64:      $URL_ARM64|" antigravity-ide-project/antigravity-ide.spec
 
           # Update the Version field
-          sed -i "s/^Version:.*/Version:        ${NEW_VERSION}/" antigravity-ide/antigravity-ide.spec
+          sed -i "s/^Version:.*/Version:        ${NEW_VERSION}/" antigravity-ide-project/antigravity-ide.spec
 
           # Reset Release to 1 for new version
-          sed -i "s/^Release:.*/Release:        1%{?dist}/" antigravity-ide/antigravity-ide.spec
+          sed -i "s/^Release:.*/Release:        1%{?dist}/" antigravity-ide-project/antigravity-ide.spec
 
           # Add changelog entry
           DATE=$(LC_ALL=C date +"%a %b %d %Y")
           CHANGELOG_ENTRY="* ${DATE} Automated Update <antigravity-ide-rpm@users.noreply.github.com> - ${NEW_VERSION}-1\n- Update to upstream version ${NEW_VERSION}"
 
           # Insert new changelog entry after %changelog line
-          sed -i "/%changelog/{n;s|^|${CHANGELOG_ENTRY}\n|}" antigravity-ide/antigravity-ide.spec
+          sed -i "/%changelog/{n;s|^|${CHANGELOG_ENTRY}\n|}" antigravity-ide-project/antigravity-ide.spec
 
           echo "Spec file updated to version ${NEW_VERSION}"
 
