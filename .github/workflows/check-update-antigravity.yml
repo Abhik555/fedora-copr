@@ -28,7 +28,7 @@ jobs:
       - name: Download and check latest version
         id: latest
         run: |
-          bash antigravity-ide/check-version.sh > version_info.txt
+          bash antigravity-ide-project/check-version.sh > version_info.txt
           cat version_info.txt
           source version_info.txt
           
