@@ -1,10 +1,9 @@
 %bcond_with toolchain_clang
-%bcond_with toolchain_gcc
 
-%if %{with toolchain_gcc}
-%global toolchain gcc
-%else
+%if %{with toolchain_clang}
 %global toolchain clang
+%else
+%global toolchain gcc
 %endif
 
 # Change these variables if you want to use custom keys
@@ -14,7 +13,7 @@
 
 # Set the Qt version
 %global qt_version 6
-%global min_qt_version 6.4
+%global min_qt_version 6.2
 
 # Give the launcher our build platform
 %global build_platform unknown
@@ -33,16 +32,35 @@
 
 Name:             prismlauncher
 Version:          11.0.3
-Release:          %autorelease
+Release:          1%{?dist}
 # See COPYING.md for more information
 # Each file in the source tree also contains a SPDX-License-Identifier header
-License:          GPL-3.0-only AND Apache-2.0 AND LGPL-3.0-only AND LGPL-2.1 AND OFL-1.1 AND MIT
+License:          GPL-3.0-only AND Apache-2.0 AND LGPL-3.0-only AND OFL-1.1 AND LGPL-2.1 AND MIT AND BSD-3-Clause
 Group:            Amusements/Games
-Summary:          Custom Minecraft Launcher to easily manage multiple installations at once
+Summary:          Minecraft launcher with ability to manage multiple instances
 Source:           https://github.com/PrismLauncher/PrismLauncher/releases/download/%{version}/PrismLauncher-%{version}.tar.gz
+Patch0:           prismlauncher-java-source-target-8.patch
+# GCC 16 (Fedora 44+) adds -Wsfinae-incomplete, which the upstream
+# -Werror build promotes to a hard error. Drop -Werror for distro builds.
+Patch1:           prismlauncher-no-werror.patch
+# Prism's metadata ships no LWJGL ppc64le natives, so Minecraft 26.1.2
+# (LWJGL 3.4.1) has no usable native libraries on ppc64le. Inject them when
+# the org.lwjgl3 3.4.1 component is parsed (ppc64le builds only). See
+# LWJGL/lwjgl3#1126 for the libffi fix carried by the core jar.
+Patch2:           prismlauncher-ppc64le-lwjgl-natives.patch
+# Feral GameMode is a hard CMake dependency upstream, but it is not packaged in
+# EPEL/RHEL (only EPEL 8). Gate it behind -DLauncher_ENABLE_FERAL_GAMEMODE so EL
+# builds (where gamemode is unavailable) can drop the dependency. See %build.
+Patch3:           prismlauncher-gamemode-optional.patch
+# EPEL 9's cmark installs its CMake export as cmark.cmake, which
+# find_package(cmark) cannot consume, so configure fails even with cmark-devel.
+# Fall back to pkg-config (libcmark) when the CMake config is absent.
+Patch4:           prismlauncher-cmark-pkgconfig-fallback.patch
 URL:              https://prismlauncher.org/
-ExclusiveArch:    x86_64
 
+BuildRequires:    cmake >= 3.22
+BuildRequires:    ninja-build
+BuildRequires:    extra-cmake-modules
 %if "%{toolchain}" == "gcc"
 BuildRequires:    gcc-c++
 %endif
@@ -50,15 +68,28 @@ BuildRequires:    gcc-c++
 BuildRequires:    clang
 BuildRequires:    lld
 %endif
+# JDKs less than the most recent release & LTS are no longer in the default
+# Fedora repositories
+# Make sure you have Adoptium's repositories enabled
+# https://fedoraproject.org/wiki/Changes/ThirdPartyLegacyJdks
+# https://adoptium.net/installation/linux/#_centosrhelfedora_instructions
+%if 0%{?fedora} > 41
+BuildRequires:    java-25-openjdk-devel
+%else
+# RHEL 10 dropped java-17; it ships 21/25. EL9 and older Fedora still have 17.
+%if 0%{?rhel} >= 10
+BuildRequires:    java-21-openjdk-devel
+%else
+BuildRequires:    java-17-openjdk-devel
+%endif
+%endif
+BuildRequires:    desktop-file-utils
+BuildRequires:    libappstream-glib
 
-BuildRequires:    java-devel >= 17
-
-BuildRequires:    cmake >= 3.22
-BuildRequires:    ninja-build
-BuildRequires:    extra-cmake-modules
-
-BuildRequires:    cmake(VulkanHeaders)
+# gamemode is not in EPEL/RHEL; on EL we build with GameMode support disabled.
+%if !0%{?rhel}
 BuildRequires:    pkgconfig(gamemode)
+%endif
 BuildRequires:    pkgconfig(libarchive)
 BuildRequires:    pkgconfig(libcmark)
 # https://bugzilla.redhat.com/show_bug.cgi?id=2166815
@@ -82,25 +113,22 @@ BuildRequires:    cmake(Qt%{qt_version}Test) >= %{min_qt_version}
 BuildRequires:    cmake(Qt%{qt_version}Widgets) >= %{min_qt_version}
 BuildRequires:    cmake(Qt%{qt_version}Xml) >= %{min_qt_version}
 
-BuildRequires:    desktop-file-utils
-BuildRequires:    libappstream-glib
-
 Requires:         qt%{qt_version}-qtimageformats
 Requires:         qt%{qt_version}-qtsvg
 
 Requires:         javapackages-filesystem
-Recommends:       java-25-openjdk
 Recommends:       java-21-openjdk
+# See note above
 %if 0%{?fedora} && 0%{?fedora} < 42
 Recommends:       java-17-openjdk
 Suggests:         java-1.8.0-openjdk
-%else
-Suggests:         adoptium-temurin-java-repository
-Suggests:         temurin-17-jdk
 %endif
 
 # Used to gather GPU with `lspci`
 Requires:         pciutils
+# Ditto, but with `glxinfo`
+Requires:         mesa-demos
+
 # Needed for LWJGL [2.9.2, 3) https://github.com/LWJGL/lwjgl/issues/128
 Recommends:       xrandr
 # Needed for using narrator in minecraft
@@ -108,18 +136,16 @@ Recommends:       flite
 # The launcher supports enabling gamemode
 Suggests:         gamemode
 
+# Added 2024-10-20
+Obsoletes:        prismlauncher-qt5 < 9.0-1
+
 %description
 A custom launcher for Minecraft that allows you to easily manage
-multiple installations of Minecraft at once (Fork of MultiMC).
-
-On Fedora 42+, if Java 17 is required for specific Minecraft versions,
-it can be installed via the Adoptium repository:
-  sudo dnf install adoptium-temurin-java-repository
-  sudo dnf install temurin-17-jdk
+multiple installations of Minecraft at once (Fork of MultiMC)
 
 
 %prep
-%autosetup -n PrismLauncher-%{version}
+%autosetup -p1 -n PrismLauncher-%{version}
 
 
 %build
@@ -130,6 +156,9 @@ it can be installed via the Adoptium repository:
   %endif
   -DLauncher_QT_VERSION_MAJOR="%{qt_version}" \
   -DLauncher_BUILD_PLATFORM="%{build_platform}" \
+  %if 0%{?rhel}
+  -DLauncher_ENABLE_FERAL_GAMEMODE=OFF \
+  %endif
   %if 0%{?fedora} > 41
   -DLauncher_ENABLE_JAVA_DOWNLOADER=ON \
   %endif
@@ -175,4 +204,8 @@ appstream-util validate-relax --nonet \
 
 
 %changelog
-%autochangelog
+* Thu Jun 18 2026 Trung Lê <trung.le@ruby-journal.com> - 11.0.2-1
+- Build for ppc64le and EL (RHEL/CentOS Stream) in addition to Fedora.
+- Make Feral GameMode optional so EL builds (no gamemode in EPEL) can disable it.
+- Use java-21-openjdk-devel on RHEL 10 (java-17 was dropped there).
+- Switch to a static Release and changelog for reliable COPR make_srpm builds.
