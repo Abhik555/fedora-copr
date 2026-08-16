@@ -120,6 +120,8 @@ it can be installed via the Adoptium repository:
 
 %prep
 %autosetup -n PrismLauncher-%{version}
+# Bump Java target from 7 to 8 to support OpenJDK 21+ compiler
+sed -i 's/-target 7 -source 7/-target 8 -source 8/g' libraries/launcher/CMakeLists.txt
 
 
 %build
