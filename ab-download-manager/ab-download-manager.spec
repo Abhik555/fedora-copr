@@ -1,5 +1,5 @@
 Name:           ab-download-manager
-Version:        1.10.2
+Version:        1.10.4
 Release:        1%{?dist}
 Summary:        Fast and modern download manager
 
